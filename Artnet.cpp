@@ -40,62 +40,62 @@ void Artnet::begin()
   Udp.begin(ART_NET_PORT);
 
 
-  //The following block populates the constant fields of the ArtPollReply packet.
   #if !defined(ARDUINO_SAMD_ZERO) && !defined(ESP8266) && !defined(ESP32)
     IPAddress node_ip_address = Ethernet.localIP();
   #else
     IPAddress node_ip_address = WiFi.localIP();
   #endif
 
+  //The following block populates the constant fields of the ArtPollReply packet.
   sprintf((char *)ArtPollReply.id, "Art-Net");
-
-  ArtPollReply.opCode = ART_POLL_REPLY;
-  ArtPollReply.port =  ART_NET_PORT;
-
-  memset(ArtPollReply.goodinput,  0b00001000, 4);
-  memset(ArtPollReply.goodoutput,  0b10000000, 4);
-  memset(ArtPollReply.porttypes,  0b10000000, 4);
-
-  memset(ArtPollReply.shortname, 0, 16);
-  memset(ArtPollReply.longname, 0, 64);
-  sprintf((char *)ArtPollReply.shortname, "artnet arduino");
-  sprintf((char *)ArtPollReply.longname, "Art-Net -> Arduino Bridge");
-
-  ArtPollReply.etsaman[0] = 0;
-  ArtPollReply.etsaman[1] = 0;
-  ArtPollReply.verH       = 1;
-  ArtPollReply.ver        = 0;
-  ArtPollReply.subH       = 0;
-  ArtPollReply.sub        = 0;
-  ArtPollReply.oemH       = 0;
-  ArtPollReply.oem        = 0xFF;
-  ArtPollReply.ubea       = 0;
-  ArtPollReply.status     = 0b11010000;
-  ArtPollReply.swvideo    = 0;
-  ArtPollReply.swmacro    = 0;
-  ArtPollReply.swremote   = 0;
+  ArtPollReply.opCode     = ART_POLL_REPLY;
+  ArtPollReply.ipAddress  = node_ip_address;
+  ArtPollReply.port       =  ART_NET_PORT;
+  ArtPollReply.versInfoH  = 1;
+  ArtPollReply.versInfoL  = 0;
+  ArtPollReply.netSwitch  = 0;
+  ArtPollReply.subSwitch  = 0;
+  ArtPollReply.oemHi      = 0;
+  ArtPollReply.oem        = 0xFF; //0xFF = "OEM Unknown"
+  ArtPollReply.ubeaVersion= 0;
+  ArtPollReply.status1    = 0b11010000;
+  ArtPollReply.estaManLo  = 0;
+  ArtPollReply.estaManHi  = 0;
+  memset(ArtPollReply.shortName, 0, 18);
+  sprintf((char *)ArtPollReply.shortName, "artnet arduino");
+  memset(ArtPollReply.longName, 0, 64);
+  sprintf((char *)ArtPollReply.longName, "Art-Net -> Arduino Bridge");
+  //ArtPollReply.nodeReport is set at runtime
+  ArtPollReply.numPortsHi = 0;
+  ArtPollReply.numPortsLo = 4;
+  memset(ArtPollReply.portTypes,  0b10000000, 4);
+  memset(ArtPollReply.goodInput,  0b00001000, 4);
+  memset(ArtPollReply.goodOutput,  0b10000000, 4);
+  uint8_t swIn[4]  = {0x00,0x01,0x02,0x03};
+  uint8_t swOut[4] = {0x00,0x01,0x02,0x03};
+  for(uint8_t i = 0; i < 4; i++)
+  {
+    ArtPollReply.swIn[i] = swIn[i];
+    ArtPollReply.swOut[i] = swOut[i];
+  }
+  ArtPollReply.swVideo    = 0;
+  ArtPollReply.swMacro    = 0;
+  ArtPollReply.swRemote   = 0;
+  ArtPollReply.spare1     = 0;
+  ArtPollReply.spare2     = 0;
+  ArtPollReply.spare3     = 0;
   ArtPollReply.style      = 0;
-
   #if !defined(ARDUINO_SAMD_ZERO) && !defined(ESP8266) && !defined(ESP32)
     Ethernet.MACAddress(ArtPollReply.mac);
   #else
     WiFi.macAdress(ArtPollReply.mac);
   #endif
-
-  ArtPollReply.numbportsH = 0;
-  ArtPollReply.numbports  = 4;
+  ArtPollReply.bindIp     = node_ip_address;
+  ArtPollReply.bindIndex  = 1;
   ArtPollReply.status2    = 0b00001000;
+  memset(ArtPollReply.filler, 0, 26);
 
-  uint8_t swin[4]  = {0x00,0x01,0x02,0x03};
-  uint8_t swout[4] = {0x00,0x01,0x02,0x03};
-  for(uint8_t i = 0; i < 4; i++)
-  {
-      ArtPollReply.swout[i] = swout[i];
-      ArtPollReply.swin[i] = swin[i];
-      ArtPollReply.bindip[i] = node_ip_address[i];
-      ArtPollReply.ip[i] = node_ip_address[i];
-  }
-  artReplyCount = 0;
+  artReplyCount           = 0;
 }
 
 void Artnet::setBroadcastAuto(IPAddress ip, IPAddress sn)
@@ -157,9 +157,9 @@ uint16_t Artnet::read()
         Serial.print(" broadcast addr: ");
         Serial.println(broadcast);
 
-        memset(ArtPollReply.nodereport, 0, 64);
+        memset(ArtPollReply.nodeReport, 0, 64);
         if (artReplyCount > 9999) artReplyCount = 0;
-        sprintf((char *)ArtPollReply.nodereport, "#0001 [%04i] %i DMX output universes active.", artReplyCount, ArtPollReply.numbports);
+        sprintf((char *)ArtPollReply.nodeReport, "#0001 [%04i] %i DMX output universes active.", artReplyCount, ArtPollReply.numPortsLo);
         artReplyCount++;
 
         Udp.beginPacket(remoteIP, ART_NET_PORT);//send the packet to the Controller that sent ArtPoll

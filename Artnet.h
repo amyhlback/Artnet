@@ -57,37 +57,38 @@ THE SOFTWARE.
 struct artnet_reply_s {
   uint8_t  id[8];
   uint16_t opCode;
-  uint8_t  ip[4];
+  uint32_t ipAddress;
   uint16_t port;
-  uint8_t  verH;
-  uint8_t  ver;
-  uint8_t  subH;
-  uint8_t  sub;
-  uint8_t  oemH;
+  uint8_t  versInfoH;
+  uint8_t  versInfoL;
+  uint8_t  netSwitch;
+  uint8_t  subSwitch;
+  uint8_t  oemHi;
   uint8_t  oem;
-  uint8_t  ubea;
-  uint8_t  status;
-  uint8_t  etsaman[2];
-  uint8_t  shortname[18];
-  uint8_t  longname[64];
-  uint8_t  nodereport[64];
-  uint8_t  numbportsH;
-  uint8_t  numbports;
-  uint8_t  porttypes[4];//max of 4 ports per node
-  uint8_t  goodinput[4];
-  uint8_t  goodoutput[4];
-  uint8_t  swin[4];
-  uint8_t  swout[4];
-  uint8_t  swvideo;
-  uint8_t  swmacro;
-  uint8_t  swremote;
-  uint8_t  sp1;
-  uint8_t  sp2;
-  uint8_t  sp3;
+  uint8_t  ubeaVersion;
+  uint8_t  status1;
+  uint8_t  estaManLo;
+  uint8_t  estaManHi;
+  uint8_t  shortName[18];
+  uint8_t  longName[64];
+  uint8_t  nodeReport[64];
+  uint8_t  numPortsHi;
+  uint8_t  numPortsLo;
+  uint8_t  portTypes[4];//max of 4 ports per node
+  uint8_t  goodInput[4];
+  uint8_t  goodOutput[4];
+  uint8_t  swIn[4];
+  uint8_t  swOut[4];
+  uint8_t  swVideo;
+  uint8_t  swMacro;
+  uint8_t  swRemote;
+  uint8_t  spare1;
+  uint8_t  spare2;
+  uint8_t  spare3;
   uint8_t  style;
   uint8_t  mac[6];
-  uint8_t  bindip[4];
-  uint8_t  bindindex;
+  uint32_t bindIp;
+  uint8_t  bindIndex;
   uint8_t  status2;
   uint8_t  filler[26];
 } __attribute__((packed));
@@ -149,7 +150,6 @@ public:
 
 private:
   uint8_t  node_ip_address[4];
-  uint8_t  id[8];
   #if defined(ARDUINO_SAMD_ZERO) || defined(ESP8266) || defined(ESP32)
     WiFiUDP Udp;
   #else
