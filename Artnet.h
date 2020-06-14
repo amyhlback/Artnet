@@ -156,6 +156,7 @@ private:
     EthernetUDP Udp;
   #endif
   struct artnet_reply_s ArtPollReply;
+  int artReplyCount;
 
 
   uint8_t artnetPacket[MAX_BUFFER_ARTNET];

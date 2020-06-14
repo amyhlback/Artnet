@@ -32,12 +32,70 @@ void Artnet::begin(byte mac[], byte ip[])
     Ethernet.begin(mac,ip);
   #endif
 
-  Udp.begin(ART_NET_PORT);
+  begin();
 }
 
 void Artnet::begin()
 {
   Udp.begin(ART_NET_PORT);
+
+
+  //The following block populates the constant fields of the ArtPollReply packet.
+  #if !defined(ARDUINO_SAMD_ZERO) && !defined(ESP8266) && !defined(ESP32)
+    IPAddress node_ip_address = Ethernet.localIP();
+  #else
+    IPAddress node_ip_address = WiFi.localIP();
+  #endif
+
+  sprintf((char *)ArtPollReply.id, "Art-Net");
+
+  ArtPollReply.opCode = ART_POLL_REPLY;
+  ArtPollReply.port =  ART_NET_PORT;
+
+  memset(ArtPollReply.goodinput,  0b00001000, 4);
+  memset(ArtPollReply.goodoutput,  0b10000000, 4);
+  memset(ArtPollReply.porttypes,  0b10000000, 4);
+
+  memset(ArtPollReply.shortname, 0, 16);
+  memset(ArtPollReply.longname, 0, 64);
+  sprintf((char *)ArtPollReply.shortname, "artnet arduino");
+  sprintf((char *)ArtPollReply.longname, "Art-Net -> Arduino Bridge");
+
+  ArtPollReply.etsaman[0] = 0;
+  ArtPollReply.etsaman[1] = 0;
+  ArtPollReply.verH       = 1;
+  ArtPollReply.ver        = 0;
+  ArtPollReply.subH       = 0;
+  ArtPollReply.sub        = 0;
+  ArtPollReply.oemH       = 0;
+  ArtPollReply.oem        = 0xFF;
+  ArtPollReply.ubea       = 0;
+  ArtPollReply.status     = 0b11010000;
+  ArtPollReply.swvideo    = 0;
+  ArtPollReply.swmacro    = 0;
+  ArtPollReply.swremote   = 0;
+  ArtPollReply.style      = 0;
+
+  #if !defined(ARDUINO_SAMD_ZERO) && !defined(ESP8266) && !defined(ESP32)
+    Ethernet.MACAddress(ArtPollReply.mac);
+  #else
+    WiFi.macAdress(ArtPollReply.mac);
+  #endif
+
+  ArtPollReply.numbportsH = 0;
+  ArtPollReply.numbports  = 4;
+  ArtPollReply.status2    = 0b00001000;
+
+  uint8_t swin[4]  = {0x00,0x01,0x02,0x03};
+  uint8_t swout[4] = {0x00,0x01,0x02,0x03};
+  for(uint8_t i = 0; i < 4; i++)
+  {
+      ArtPollReply.swout[i] = swout[i];
+      ArtPollReply.swin[i] = swin[i];
+      ArtPollReply.bindip[i] = node_ip_address[i];
+      ArtPollReply.ip[i] = node_ip_address[i];
+  }
+  artReplyCount = 0;
 }
 
 void Artnet::setBroadcastAuto(IPAddress ip, IPAddress sn)
@@ -99,74 +157,17 @@ uint16_t Artnet::read()
         Serial.print(" broadcast addr: ");
         Serial.println(broadcast);
 
-        #if !defined(ARDUINO_SAMD_ZERO) && !defined(ESP8266) && !defined(ESP32)
-          IPAddress local_ip = Ethernet.localIP();
-        #else
-          IPAddress local_ip = WiFi.localIP();
-        #endif
-        node_ip_address[0] = local_ip[0];
-      	node_ip_address[1] = local_ip[1];
-      	node_ip_address[2] = local_ip[2];
-      	node_ip_address[3] = local_ip[3];
-
-        sprintf((char *)id, "Art-Net");
-        memcpy(ArtPollReply.id, id, sizeof(ArtPollReply.id));
-        memcpy(ArtPollReply.ip, node_ip_address, sizeof(ArtPollReply.ip));
-
-        ArtPollReply.opCode = ART_POLL_REPLY;
-        ArtPollReply.port =  ART_NET_PORT;
-
-        memset(ArtPollReply.goodinput,  0x08, 4);
-        memset(ArtPollReply.goodoutput,  0x80, 4);
-        memset(ArtPollReply.porttypes,  0x80, 4);
-
-        memset(ArtPollReply.shortname, 0, 16);
-        memset(ArtPollReply.longname, 0, 64);
-        sprintf((char *)ArtPollReply.shortname, "artnet arduino");
-        sprintf((char *)ArtPollReply.longname, "Art-Net -> Arduino Bridge");
-
-        ArtPollReply.etsaman[0] = 0;
-        ArtPollReply.etsaman[1] = 0;
-        ArtPollReply.verH       = 1;
-        ArtPollReply.ver        = 0;
-        ArtPollReply.subH       = 0;
-        ArtPollReply.sub        = 0;
-        ArtPollReply.oemH       = 0;
-        ArtPollReply.oem        = 0xFF;
-        ArtPollReply.ubea       = 0;
-        ArtPollReply.status     = 0xd2;
-        ArtPollReply.swvideo    = 0;
-        ArtPollReply.swmacro    = 0;
-        ArtPollReply.swremote   = 0;
-        ArtPollReply.style      = 0;
-
-        #if !defined(ARDUINO_SAMD_ZERO) && !defined(ESP8266) && !defined(ESP32)
-          Ethernet.MACAddress(ArtPollReply.mac);
-        #else
-          WiFi.macAdress(ArtPollReply.mac);
-        #endif
-
-        ArtPollReply.numbportsH = 0;
-        ArtPollReply.numbports  = 4;
-        ArtPollReply.status2    = 0x08;
-
-        ArtPollReply.bindip[0] = node_ip_address[0];
-        ArtPollReply.bindip[1] = node_ip_address[1];
-        ArtPollReply.bindip[2] = node_ip_address[2];
-        ArtPollReply.bindip[3] = node_ip_address[3];
-
-        uint8_t swin[4]  = {0x00,0x01,0x02,0x03};
-        uint8_t swout[4] = {0x00,0x01,0x02,0x03};
-        for(uint8_t i = 0; i < 4; i++)
-        {
-            ArtPollReply.swout[i] = swout[i];
-            ArtPollReply.swin[i] = swin[i];
-        }
         memset(ArtPollReply.nodereport, 0, 64);
-        sprintf((char *)ArtPollReply.nodereport, "%i DMX output universes active.", ArtPollReply.numbports);
+        if (artReplyCount > 9999) artReplyCount = 0;
+        sprintf((char *)ArtPollReply.nodereport, "#0001 [%04i] %i DMX output universes active.", artReplyCount, ArtPollReply.numbports);
+        artReplyCount++;
+
         Udp.beginPacket(remoteIP, ART_NET_PORT);//send the packet to the Controller that sent ArtPoll
         Udp.write((uint8_t *)&ArtPollReply, sizeof(ArtPollReply));
         Udp.endPacket();
+
+        //To fully implement the standard, state1, state2, goodoutput[0-3] should be
+        //exposed in some way so that the flags can be set during runtime.
 
         return ART_POLL;
       }
